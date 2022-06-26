@@ -1,113 +1,175 @@
-const key = 1;
-
-const body = document.body;
-const down = document.getElementById("down");
+const key = "HomoPolus";
 
 
-async function addUser(newUser) {
+// ADD USER STRING TO USER STORAGE ARRAY
+async function addUser(user){
+    
+    let res = await fetch("https://codeforces.com/api/user.info?handles="+user);
+    let data = await res.json();
+    let temp = await data.status;
+    
+    if(temp == "FAILED") return;
+    
+    // IF NOT INITIALIZED AND WHEN DELETE ON LENGTH = 1,CLEAR STORAGE\
+    if(localStorage.getItem(key) == null){
+        
+        let arr = []
+        
+        arr.push(user);
 
-    // request for ratings
-    const res = await fetch(`https://codeforces.com/api/user.rating?handle=${newUser}`);
-    const data = await res.json();
-    const resultArray = await data.result;
-    const oldRat = await resultArray[resultArray.length - 1].oldRating;
-    const newRat = await resultArray[resultArray.length - 1].newRating;
-
-    // request for photo and name
-    const res2 = await fetch(`https://codeforces.com/api/user.info?handles=${newUser}`);
-    const data2 = await res2.json();
-    const userPhoto = await data2.result[0].titlePhoto;
-    const userTitle = newUser;
-    const obj = { key: key, old_rat: oldRat, new_rat: newRat, photo: userPhoto, title: userTitle };
-
-    if (localStorage.length == 0) {
-        let ratingList = [];
-        ratingList.push(obj);
-        let str = JSON.stringify(ratingList);
-        localStorage.setItem(key, str);
-    }
-    else {
-        const dataVal = localStorage.getItem(key);
-        const currArr = JSON.parse(dataVal);
-        currArr.push(obj);
-        const newArr = JSON.stringify(currArr);
-        localStorage.removeItem(key);
-        localStorage.setItem(key, newArr);
-    }
-    display();
-}
-
-const display = () => {
-
-    const info = JSON.parse(localStorage.getItem(key));
-
-    // if (localStorage.length != 0) {
-    // Do Not Touch this line
-    down.innerHTML = `<br>`
-
-    // change code here for list updation
-    const div = document.createElement("div");
-    div.classList.add('major');
-    let index = 0;
-    if (info.length == 0) return;
-    info.map(x => {
-        const ran = document.createElement('div');
-        ran.innerHTML = `    
-                <div class="col1">
-                <p class="col1class">${x.title}</p>
-                <img src = "${x.photo}"></img>
-                    
-                </div>
-                <div class="col2">
-                    <h2 id="oldId">Older Rating : ${x.old_rat}</h2>
-                    <h2 id="newId">Current Rating : ${x.new_rat}</h2>
-                </div>
-
-                 <img class="delete" src = "https://icons-for-free.com/iconfiles/png/512/delete+24px-131985190578721347.png" onclick = "deleteUser(${index})"></img>
-                `;
-        div.appendChild(ran);
-
-        ran.classList.add('cards');
-        ran.id = index.toString();
-        // console.log(x);
-        index++;
-    })
-    down.append(div);
-    // }
-}
-
-
-let addBut = document.getElementById("add");
-let clr = document.getElementById("clrAll");
-
-// localStorage.clear();
-addBut.addEventListener('click',
-    () => {
-        const input = document.getElementById('input-field')
-        let str = input.value;
-        // console.log(str);
-        addUser(str);
-    })
-
-clr.addEventListener('click',
-    () => {
         localStorage.clear();
-        display();
-    })
+
+        let strArr = JSON.stringify(arr);
+        localStorage.setItem(key,strArr);
+
+        returnUsers(); 
+        return;
+    }
+    
+    
+    let arrayString = localStorage.getItem(key);
+    let arr = JSON.parse(arrayString);
+    arr.push(user);
+    
+    localStorage.clear();
+    
+    let strArr = JSON.stringify(arr);
+    localStorage.setItem(key,strArr);
+    returnUsers();
+}
 
 
-const deleteUser = (idx) => {
+// LISTENER ON ADD BUTTON
+document.getElementById("add").addEventListener("click", () => {
+    let inputUser = document.getElementById("input-field").value;
+    addUser(inputUser);
+})
 
-    const info = JSON.parse(localStorage.getItem(key));
 
-    info.splice(idx, 1);
-    let aarr = JSON.stringify(info);
+// CREATES USER STRING OF NEWLY GENERATED ARRAY AND THEN CALLS FOR FETCH
+async function returnUsers(){
+
+    // CHANGE
+    if(localStorage.getItem(key) == null){
+        document.getElementById("cards-div").innerHTML = ``;
+        return;
+    }
+
+    let arrayString = localStorage.getItem(key);
+    let arr = JSON.parse(arrayString);
+
+    let usersString = "";
+
+    let userSet = new Set();
+
+    for(const user of arr){
+        userSet.add(user);
+    }
+    
+    for(const user of userSet){
+        usersString += user + ";";
+    }
+
+    display(usersString);
+}
+
+
+function deleteUser(user){
+    console.log(document.getElementsByClassName("deleteIt"));
+    console.log("deleted " + user)
+    let arrayString = localStorage.getItem(key);
+    let arr = JSON.parse(arrayString);
+
+    // console.log(arr);
+    for(const item of arr){
+        if(item === user){
+            arr.splice(item,1);
+        }
+    }
+
+    // arr = arr.filter(u => u!==user);
+    console.log(arr);
 
     localStorage.clear();
 
-    localStorage.setItem(key, aarr);
-
-    display();
+    let strArr = JSON.stringify(arr);
+    localStorage.setItem(key,strArr);
+    
+    returnUsers();
 }
 
-display()
+async function display(usersString){
+    
+    let res = await fetch("https://codeforces.com/api/user.info?handles="+usersString);
+    let temp = await res.json();
+    let resultArray = await temp.result; 
+    
+    document.getElementById("cards-div").innerHTML = ``;
+
+    for(const x of resultArray){
+        
+        let fullName = x.firstName + x.lastName;
+
+        document.getElementById("cards-div").innerHTML += `
+        <div class="card">
+            <div class="title-section">
+                <div class="user-info-section">
+                    <div class="user-img-div">
+                        <img src="${x.titlePhoto}" alt="" class="user-img">
+                    </div>
+                    <div class="name-section">
+                        <div class="name-div">
+                            <h3 class="name">${fullName} </h3>
+                        </div>
+                        <div class="user-name-div">    
+                            <h4 class="user-name">@${x.handle}</h4>
+                        </div>
+                    </div>
+    
+                </div>
+                
+                <div class="bin-section" >
+                    <div class="bin-icon">
+                    <button style="background-color:#fff0 !important;" class="delete"><img id="${x.handle}" class="deleteIt" src = "deleteImage.png"></button>
+                    </div>
+                </div>
+            </div>
+    
+            <div class="ratings-section">
+    
+                <div class="new-rating rating-div">
+                    <h2 class="rating-score">${x.rank}</h2>
+                    <p>Current Rank</p>
+                </div>
+                <div class="old-rating rating-div">
+                    <h2 class="rating-score">${x.rating}</h2>
+                    <p>Current Rating</p>
+                </div>
+                <div class="max-rating rating-div">
+                    <h2 class="rating-score">${x.maxRating}</h2>
+                    <p>Max Rating</p>
+                </div>
+            </div>
+        </div>`;
+
+        document.querySelector(`#${x.handle}`).addEventListener("click", (e) => {
+           
+            e.preventDefault();
+
+            deleteUser(x.handle);
+        });
+    }
+}
+
+function hotReload(){
+    if(localStorage.getItem(key) != null){
+        returnUsers();
+    }
+} 
+            
+document.getElementById("clrAll").addEventListener("click", () => {
+    localStorage.clear();
+    returnUsers();
+});
+
+hotReload();
